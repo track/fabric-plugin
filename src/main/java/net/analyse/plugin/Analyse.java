@@ -1,22 +1,53 @@
 package net.analyse.plugin;
 
+import gnu.trove.map.hash.TCustomHashMap;
+import gnu.trove.strategy.IdentityHashingStrategy;
 import net.analyse.plugin.util.AnalyseConfig;
 import net.analyse.plugin.util.ModCommandRegister;
 import net.analyse.plugin.util.ModEventsRegister;
+import net.analyse.sdk.AnalyseSDK;
+import net.analyse.sdk.exception.ServerNotFoundException;
+import net.analyse.sdk.response.GetPluginResponse;
 import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.ConfigurateException;
+import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
+import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+import redis.clients.jedis.JedisPooled;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static net.analyse.plugin.util.EncryptUtil.generateEncryptionKey;
 
 public class Analyse implements ModInitializer {
+	private final Map<UUID, Date> activeJoinMap = new TCustomHashMap<>(new IdentityHashingStrategy<>());
+	private final Map<UUID, String> playerDomainMap = new TCustomHashMap<>(new IdentityHashingStrategy<>());
+
+	private AnalyseSDK core = null;
+
+	private boolean setup;
+
+	private String serverToken;
+	private String encryptionKey;
+	private JedisPooled redis = null;
+
+	// TODO: Auto find the actual plugin version.
+	private final String PLUGIN_VERSION = "1.0.0";
+
+	private final String API_HEADER = "Analyse v" + PLUGIN_VERSION + " / Fabric v1.19";
+	private int incrementalVersion = Integer.parseInt(PLUGIN_VERSION.replace(".", ""));
+
+
 	public final String MOD_ID = "analyse";
 	public final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 	private final File MOD_PATH = new File("./mods/" + MOD_ID);
@@ -25,35 +56,74 @@ public class Analyse implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("Initializing Analyse...");
+		log("Initializing Analyse...");
 
-		// register the command
+		try {
+			this.config = saveDefaultConfig();
+			log("Config loaded successfully!");
+
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to load config", e);
+		}
+
+		if (!setup) {
+			log("Hey! I'm not yet set-up, please run the following command:");
+			log("/analyse setup <server-token>");
+		} else {
+			core = new AnalyseSDK(serverToken, encryptionKey);
+			core.setApiHeader(API_HEADER);
+
+			try {
+				log("Linked Analyse to " + core.getServer().getName() + ".");
+			} catch (ServerNotFoundException e) {
+				log("The server linked no longer exists.");
+			}
+		}
+
+		serverToken = config.getServerToken();
+		encryptionKey = config.getEncryptionKey();
+
+		if (encryptionKey == null || encryptionKey.isEmpty()) {
+			encryptionKey = generateEncryptionKey(64);
+
+			try {
+				ConfigurationNode configurationNode = config.getConfigurationNode();
+				configurationNode.node("encryption-key").set(encryptionKey);
+				config.getLoader().save(configurationNode);
+			} catch (ConfigurateException e) {
+				throw new RuntimeException(e);
+			}
+
+			log("Generated encryption key.");
+			reloadConfig();
+		}
+
+		// register our utils.
 		ModCommandRegister.registerCommands();
 		ModEventsRegister.registerEvents();
 
-		// get mod path
-		if (!MOD_PATH.exists()) {
-			MOD_PATH.mkdirs();
-		}
-
-		try {
-			this.config = loadConfig();
-			LOGGER.info("Config loaded successfully!");
-			LOGGER.info("Token is '" + config.getToken() + "'.");
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to load config", e);
+		if(core != null) {
+			GetPluginResponse corePluginVersion = core.getPluginVersion();
+			if(corePluginVersion.getVersionNumber() > incrementalVersion) {
+				log(String.format("This server is running v%s, an outdated version of Analyse.", PLUGIN_VERSION));
+				log(String.format("Download v%s at: %s", corePluginVersion.getVersionName(), corePluginVersion.getBukkitDownload()));
+			}
 		}
 	}
 
 	public void reloadConfig() {
 		try {
-			config = loadConfig();
+			config = saveDefaultConfig();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	private AnalyseConfig loadConfig() throws Exception {
+	private AnalyseConfig saveDefaultConfig() throws Exception {
+		if (!MOD_PATH.exists()) {
+			MOD_PATH.mkdirs();
+		}
+
 		File file = new File(MOD_PATH, "config.yml");
 
 		if (!file.exists()) {
@@ -67,8 +137,12 @@ public class Analyse implements ModInitializer {
 
 		Path potentialFile = file.toPath();
 		ConfigurationLoader<CommentedConfigurationNode> loader = YamlConfigurationLoader.builder().path(potentialFile).build();
+		CommentedConfigurationNode configNode = loader.load();
 
-		return new AnalyseConfig(loader.load());
+		return new AnalyseConfig(loader, configNode);
 	}
 
+	public void log(String message) {
+		LOGGER.info("[Analyse] " + message);
+	}
 }
