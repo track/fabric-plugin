@@ -15,10 +15,25 @@ import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.serialize.SerializationException;
 
 public class AnalyseCommand {
+    private final Analyse plugin;
 
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess, CommandManager.RegistrationEnvironment registrationEnvironment) {
+    public AnalyseCommand(Analyse plugin) {
+        this.plugin = plugin;
+    }
+
+    public void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess, CommandManager.RegistrationEnvironment registrationEnvironment) {
         dispatcher.register(
             CommandManager.literal("analyse").executes(context -> {
+
+                if(plugin.isSetup()) {
+                    try {
+                        context.getSource().sendFeedback(Text.literal("Analyse: Connected to " + plugin.getCore().getServer().getName()), true);
+                    } catch (ServerNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return 1;
+                }
+
                 context.getSource().sendFeedback(Text.literal("Analyse Plugin"), true);
                 return 1;
             })
@@ -27,7 +42,6 @@ public class AnalyseCommand {
                             CommandManager.argument("token", StringArgumentType.string()).executes(context -> {
                                 Thread newThread = new Thread(() -> {
                                     String token = StringArgumentType.getString(context, "token");
-                                    Analyse plugin = Analyse.getInstance();
                                     AnalyseSDK analyseSDK = plugin.setup(token);
 
                                     try {

@@ -2,13 +2,14 @@ package net.analyse.plugin;
 
 import gnu.trove.map.hash.TCustomHashMap;
 import gnu.trove.strategy.IdentityHashingStrategy;
+import net.analyse.plugin.command.AnalyseCommand;
 import net.analyse.plugin.util.AnalyseConfig;
-import net.analyse.plugin.util.ModCommandRegister;
 import net.analyse.plugin.util.ModEventsRegister;
 import net.analyse.sdk.AnalyseSDK;
 import net.analyse.sdk.exception.ServerNotFoundException;
 import net.analyse.sdk.response.GetPluginResponse;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.configurate.CommentedConfigurationNode;
@@ -53,17 +54,13 @@ public class Analyse implements ModInitializer {
 	private final File MOD_PATH = new File("./mods/" + MOD_ID);
 
 	private AnalyseConfig config;
-	private static Analyse instance;
 
 	@Override
 	public void onInitialize() {
 		log("Initializing Analyse...");
-		instance = this;
 
 		try {
 			this.config = saveDefaultConfig();
-			log("Config loaded successfully!");
-
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to load config", e);
 		}
@@ -106,8 +103,8 @@ public class Analyse implements ModInitializer {
 		}
 
 		// register our utils.
-		ModCommandRegister.registerCommands();
-		ModEventsRegister.registerEvents();
+		registerCommands();
+		new ModEventsRegister(this).registerEvents();
 
 		if(core != null) {
 			GetPluginResponse corePluginVersion = core.getPluginVersion();
@@ -116,6 +113,10 @@ public class Analyse implements ModInitializer {
 				log(String.format("Download v%s at: %s", corePluginVersion.getVersionName(), corePluginVersion.getBukkitDownload()));
 			}
 		}
+	}
+
+	public void registerCommands() {
+		CommandRegistrationCallback.EVENT.register(new AnalyseCommand(this)::register);
 	}
 
 	public void reloadConfig() {
@@ -153,10 +154,6 @@ public class Analyse implements ModInitializer {
 		LOGGER.info("[Analyse] " + message);
 	}
 
-	public static Analyse getInstance() {
-		return instance;
-	}
-
 	public AnalyseSDK setup(String token) {
 		core = new AnalyseSDK(token, encryptionKey);
 		core.setApiHeader(API_HEADER);
@@ -165,6 +162,14 @@ public class Analyse implements ModInitializer {
 
 	public AnalyseConfig getConfig() {
 		return config;
+	}
+
+	public AnalyseSDK getCore() {
+		return core;
+	}
+
+	public boolean isSetup() {
+		return setup;
 	}
 
 	public void setSetup(boolean setup) {
