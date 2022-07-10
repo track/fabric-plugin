@@ -7,7 +7,6 @@ import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.configurate.CommentedConfigurationNode;
-import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
@@ -18,9 +17,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class Analyse implements ModInitializer {
-	public static final String MOD_ID = "analyse";
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	private File MOD_PATH = new File("./mods/" + MOD_ID);
+	public final String MOD_ID = "analyse";
+	public final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+	private final File MOD_PATH = new File("./mods/" + MOD_ID);
 
 	private AnalyseConfig config;
 
@@ -55,26 +54,21 @@ public class Analyse implements ModInitializer {
 	}
 
 	private AnalyseConfig loadConfig() throws Exception {
-		Path potentialFile = Path.of(MOD_PATH.getPath(), "config.yml");
-		ConfigurationLoader<CommentedConfigurationNode> loader =
-				YamlConfigurationLoader.builder().path(potentialFile).build();
-
-		return new AnalyseConfig(loader.load());
-	}
-
-	private File getBundledFile(String name) {
-		File file = new File(MOD_PATH, name);
+		File file = new File(MOD_PATH, "config.yml");
 
 		if (!file.exists()) {
 			MOD_PATH.mkdir();
-			try (InputStream in = Analyse.class.getResourceAsStream("/" + name)) {
+			try (InputStream in = Analyse.class.getResourceAsStream("/config.yml")) {
 				Files.copy(in, file.toPath());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
-		return file;
+		Path potentialFile = file.toPath();
+		ConfigurationLoader<CommentedConfigurationNode> loader = YamlConfigurationLoader.builder().path(potentialFile).build();
+
+		return new AnalyseConfig(loader.load());
 	}
 
 }
