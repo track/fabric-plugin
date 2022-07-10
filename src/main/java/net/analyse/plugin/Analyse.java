@@ -15,7 +15,6 @@ import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurateException;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.loader.ConfigurationLoader;
-import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 import redis.clients.jedis.JedisPooled;
 
@@ -24,8 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
 
 import static net.analyse.plugin.util.EncryptUtil.generateEncryptionKey;
 
@@ -53,10 +53,12 @@ public class Analyse implements ModInitializer {
 	private final File MOD_PATH = new File("./mods/" + MOD_ID);
 
 	private AnalyseConfig config;
+	private static Analyse instance;
 
 	@Override
 	public void onInitialize() {
 		log("Initializing Analyse...");
+		instance = this;
 
 		try {
 			this.config = saveDefaultConfig();
@@ -65,6 +67,11 @@ public class Analyse implements ModInitializer {
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to load config", e);
 		}
+
+		serverToken = config.getServerToken();
+		encryptionKey = config.getEncryptionKey();
+		setup = serverToken != null && !serverToken.isEmpty();
+
 
 		if (!setup) {
 			log("Hey! I'm not yet set-up, please run the following command:");
@@ -144,5 +151,23 @@ public class Analyse implements ModInitializer {
 
 	public void log(String message) {
 		LOGGER.info("[Analyse] " + message);
+	}
+
+	public static Analyse getInstance() {
+		return instance;
+	}
+
+	public AnalyseSDK setup(String token) {
+		core = new AnalyseSDK(token, encryptionKey);
+		core.setApiHeader(API_HEADER);
+		return core;
+	}
+
+	public AnalyseConfig getConfig() {
+		return config;
+	}
+
+	public void setSetup(boolean setup) {
+		this.setup = setup;
 	}
 }
