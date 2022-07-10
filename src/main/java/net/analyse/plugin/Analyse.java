@@ -4,17 +4,18 @@ import net.analyse.plugin.util.AnalyseConfig;
 import net.analyse.plugin.util.ModCommandRegister;
 import net.analyse.plugin.util.ModEventsRegister;
 import net.fabricmc.api.ModInitializer;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.ConfigurationOptions;
-import ninja.leaping.configurate.objectmapping.serialize.TypeSerializerCollection;
-import ninja.leaping.configurate.yaml.YAMLConfigurationLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.loader.ConfigurationLoader;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class Analyse implements ModInitializer {
 	public static final String MOD_ID = "analyse";
@@ -38,6 +39,8 @@ public class Analyse implements ModInitializer {
 
 		try {
 			this.config = loadConfig();
+			LOGGER.info("Config loaded successfully!");
+			LOGGER.info("Token is '" + config.getToken() + "'.");
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to load config", e);
 		}
@@ -52,18 +55,11 @@ public class Analyse implements ModInitializer {
 	}
 
 	private AnalyseConfig loadConfig() throws Exception {
-		TypeSerializerCollection serializerCollection = TypeSerializerCollection.create();
+		Path potentialFile = Path.of(MOD_PATH.getPath(), "config.yml");
+		ConfigurationLoader<CommentedConfigurationNode> loader =
+				YamlConfigurationLoader.builder().path(potentialFile).build();
 
-		ConfigurationOptions options = ConfigurationOptions.defaults()
-				.withSerializers(serializerCollection);
-
-		ConfigurationNode configNode = YAMLConfigurationLoader.builder()
-				.setDefaultOptions(options)
-				.setFile(getBundledFile("config.yml"))
-				.build()
-				.load();
-
-		return new AnalyseConfig(configNode);
+		return new AnalyseConfig(loader.load());
 	}
 
 	private File getBundledFile(String name) {

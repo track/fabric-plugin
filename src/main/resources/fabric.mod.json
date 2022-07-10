@@ -9,7 +9,7 @@
     "heychazza"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
+    "homepage": "https://analyse.net/",
     "sources": "https://github.com/FabricMC/fabric-example-mod"
   },
 
@@ -28,8 +28,5 @@
     "fabric": "*",
     "minecraft": "~1.19",
     "java": ">=17"
-  },
-  "suggests": {
-    "another-mod": "*"
   }
 }
