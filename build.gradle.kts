@@ -20,6 +20,7 @@ val mavenGroup: String by project
 group = mavenGroup
 
 dependencies {
+	implementation("ninja.leaping.configurate:configurate-yaml:3.7.1")
 	// To change the versions see the gradle.properties file
 	val minecraftVersion: String by project
 	minecraft("com.mojang:minecraft:${minecraftVersion}")
@@ -38,6 +39,9 @@ dependencies {
 	// These are included in the Fabric API production distribution and allow you to update your mod to the latest modules at a later more convenient time.
 
 	// modImplementation "net.fabricmc.fabric-api:fabric-api-deprecated:${project.fabric_version}"
+}
+repositories {
+	mavenCentral()
 }
 
 tasks {

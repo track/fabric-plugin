@@ -22,8 +22,6 @@
       "net.analyse.plugin.Analyse"
     ]
   },
-  "mixins": [
-  ],
 
   "depends": {
     "fabricloader": ">=0.14.6",
