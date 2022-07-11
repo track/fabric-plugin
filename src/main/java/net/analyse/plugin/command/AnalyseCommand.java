@@ -22,9 +22,7 @@ public class AnalyseCommand {
     }
 
     public void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess commandRegistryAccess, CommandManager.RegistrationEnvironment registrationEnvironment) {
-        dispatcher.register(
-            CommandManager.literal("analyse").executes(context -> {
-
+        dispatcher.register(CommandManager.literal("analyse").executes(context -> {
                 if(plugin.isSetup()) {
                     try {
                         context.getSource().sendFeedback(Text.literal("Analyse: Connected to " + plugin.getCore().getServer().getName()), true);
