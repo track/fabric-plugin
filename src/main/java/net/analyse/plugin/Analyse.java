@@ -154,6 +154,11 @@ public class Analyse implements ModInitializer {
 		LOGGER.info("[Analyse] " + message);
 	}
 
+	public void debug(String message) {
+		if(!getConfig().debug()) return;
+		log("Debug: " + message);
+	}
+
 	public AnalyseSDK setup(String token) {
 		core = new AnalyseSDK(token, encryptionKey);
 		core.setApiHeader(API_HEADER);
@@ -174,5 +179,20 @@ public class Analyse implements ModInitializer {
 
 	public void setSetup(boolean setup) {
 		this.setup = setup;
+	}
+
+	public Map<UUID, Date> getActiveJoinMap() {
+		return activeJoinMap;
+	}
+
+	public Map<UUID, String> getPlayerDomainMap() {
+		return playerDomainMap;
+	}
+
+	public void clearPlayerCache(UUID playerUuid) {
+		getPlayerDomainMap().remove(playerUuid);
+		getActiveJoinMap().remove(playerUuid);
+		core.getExcludedPlayers().remove(playerUuid);
+		core.getPlayerStatistics(playerUuid).clear();
 	}
 }
